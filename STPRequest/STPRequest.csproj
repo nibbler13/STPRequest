@@ -5,7 +5,7 @@
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{605D13F8-8456-4EF7-AFB4-8CC4BD797400}</ProjectGuid>
-    <OutputType>Exe</OutputType>
+    <OutputType>WinExe</OutputType>
     <RootNamespace>STPRequest</RootNamespace>
     <AssemblyName>STPRequest</AssemblyName>
     <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
@@ -47,7 +47,6 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="EventSystem.cs" />
     <Compile Include="Logging.cs" />
     <Compile Include="Mail.cs" />
     <Compile Include="Properties\Settings.Designer.cs">

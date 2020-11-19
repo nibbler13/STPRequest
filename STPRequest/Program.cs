@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.ServiceProcess;
 using System.Text;
@@ -12,41 +13,57 @@ namespace STPRequest {
 		/// The main entry point for the application.
 		/// </summary>
 		/// 
-		private static EventSystem eventSystem;
-		private static Thread thread;
+		private static string requestsPath = Properties.Settings.Default.RequestFolderPath;
 
 		static void Main() {
-			if (Environment.UserInteractive) {
-				Start();
+			while(true) {
+				Thread.Sleep(5000);
 
-				Console.WriteLine("Press any key to stop...");
-				Console.ReadKey(true);
+				try {
+					string[] requests = Directory.GetFiles(requestsPath, "*.req");
+					if (requests.Length == 0) {
+						Logging.ToLog("Нет новых обращений (*.req)");
+						continue;
+					}
 
-				Stop();
-			} else
-				using (Service service = new Service())
-					ServiceBase.Run(service);
-		}
+					foreach (string request in requests) {
+						try {
+							Logging.ToLog("Обработка: " + request);
+							string requestID = Path.GetFileNameWithoutExtension(request);
+							string requestContent = File.ReadAllText(request);
 
-		public class Service : ServiceBase {
-			public Service() { }
-			protected override void OnStart(string[] args) { Start(); }
-			protected override void OnStop() { Stop(); }
-		}
+							string[] attachments = Directory.GetFiles(requestsPath, requestID + "@*");
+							Logging.ToLog("Кол-во вложений: " + attachments.Length);
 
-		private static void Start() {
-			Logging.ToLog("----- Запуск");
+							List<string> attachmentsToSend = new List<string>();
+							foreach (string attachment in attachments) {
+								string attachmentToSend = attachment.Replace(requestID + "@", "");
+								File.Copy(attachment, attachmentToSend);
+								attachmentsToSend.Add(attachmentToSend);
+							}
 
-			eventSystem = new EventSystem();
-			thread = new Thread(eventSystem.CheckNewRequests) { IsBackground = true };
-			thread.Start();
-		}
+							Mail.SendMail(
+								"Обращение в службу технической поддержки",
+								requestContent,
+								"stp@bzklinika.ru",
+								attachmentsToSend.ToArray(),
+								false);
 
-		private static void Stop() {
-			Logging.ToLog("----- Завершение");
+							File.Delete(request);
 
-			eventSystem.Stop();
-			thread.Abort();
+							foreach (string attachment in attachments)
+								File.Delete(attachment);
+
+							foreach (string attachmentToSend in attachmentsToSend)
+								File.Delete(attachmentToSend);
+						} catch (Exception excReq) {
+							Logging.ToLog(excReq.Message + Environment.NewLine + excReq.StackTrace);
+						}
+					}
+				} catch (Exception exc) {
+					Logging.ToLog(exc.Message + Environment.NewLine + exc.StackTrace);
+				}
+			}
 		}
 	}
 }
